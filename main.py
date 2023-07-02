@@ -5,6 +5,7 @@ import json
 from typing import Optional, List
 import can
 import datetime
+import signal, sys
 
 from canparser_generator import CanTopicParser
 
@@ -171,9 +172,11 @@ def process_message(parsed: dict, verbose: bool = False) -> Optional[list]:
 
 
 if __name__ == "__main__":
+
+
     global schema
 
-    schema = CanIds.load("can_ids_lic_01072023.json")
+    schema = CanIds.load("can_ids.json")
     schema = CanTopicParser.generate_parsers(schema)
 
     boat_data = {
@@ -186,73 +189,84 @@ if __name__ == "__main__":
     }
     should_display = True
 
-    with can.interface.Bus(bustype="socketcan", bitrate=500_000) as bus:  # type: ignore
-        try:
-            # Start receiving messages from the bus
-            for message in bus:
-                # Dispatch the received message to the custom parser
-                parsed_topic = process_message(
-                    {
-                        "timestamp": message.timestamp,
-                        "topic": message.arbitration_id,
-                        "payload": message.data,
-                    },
-                    verbose=False,
+    bus = can.interface.Bus(bustype="socketcan", bitrate=500_000)  # type: ignore
+
+    def int_handler(signum, frame):
+        bus.shutdown()
+        print("\nNicely terminated.")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, int_handler)
+    signal.signal(signal.SIGTERM, int_handler)
+
+    try:
+        # Start receiving messages from the bus
+        for message in bus:
+            # Dispatch the received message to the custom parser
+            parsed_topic = process_message(
+                {
+                    "timestamp": message.timestamp,
+                    "topic": message.arbitration_id,
+                    "payload": message.data,
+                },
+                verbose=False,
+            )
+
+            if not parsed_topic:
+                continue
+
+            for data in parsed_topic:
+                if (
+                    data["module_name"] == "MIC19"
+                    and data["topic_name"] == "MOTOR"
+                    and data["byte_name"] == "D"
+                ):
+                    should_display = True
+                    boat_data["mot_D"] = data["value"] * 100
+                elif (
+                    data["module_name"] == "MCS19"
+                    and data["topic_name"] == "BAT"
+                    and data["byte_name"] == "AVG"
+                ):
+                    should_display = True
+                    boat_data["bat_V"] = data["value"]
+                elif (
+                    data["module_name"] == "MSC19_4"
+                    and data["topic_name"] == "ADC"
+                    and data["byte_name"] == "AVG"
+                ):
+                    should_display = True
+                    boat_data["bat_I_IN"] = data["value"]
+                elif (
+                    data["module_name"] == "MSC19_5"
+                    and data["topic_name"] == "ADC"
+                    and data["byte_name"] == "AVG"
+                ):
+                    should_display = True
+                    boat_data["bat_I_OUT"] = data["value"]
+
+            if should_display:
+                should_display = False
+
+                boat_data["bat_I"] = boat_data["bat_I_IN"] - boat_data["bat_I_OUT"]
+                boat_data["bat_P"] = boat_data["bat_I"] * boat_data["bat_V"]
+                display = ", ".join(
+                    [
+                        datetime.datetime.fromtimestamp(message.timestamp).strftime(
+                            "%H:%M:%S.%f"
+                        )[:-3],
+                        "mot_D: {:>5.1f} [%]".format(boat_data["mot_D"]),
+                        "bat_V: {:>6.2f} [V]".format(boat_data["bat_V"]),
+                        "bat_I: {:>6.2f} [A]".format(boat_data["bat_I"]),
+                        "bat_P: {:>8.2f} [W]".format(boat_data["bat_P"]),
+                    ]
                 )
+                print(display)
 
-                if not parsed_topic:
-                    continue
+    except KeyboardInterrupt:
+        # Stop receiving messages on keyboard interrupt
+        pass
+    except Exception as e:
+        print(e)
 
-                for data in parsed_topic:
-                    if (
-                        data["module_name"] == "MIC19"
-                        and data["topic_name"] == "MOTOR"
-                        and data["byte_name"] == "D"
-                    ):
-                        should_display = True
-                        boat_data["mot_D"] = data["value"] * 100
-                    elif (
-                        data["module_name"] == "MCS19"
-                        and data["topic_name"] == "BAT"
-                        and data["byte_name"] == "AVG"
-                    ):
-                        should_display = True
-                        boat_data["bat_V"] = data["value"]
-                    elif (
-                        data["module_name"] == "MSC19_4"
-                        and data["topic_name"] == "ADC"
-                        and data["byte_name"] == "AVG"
-                    ):
-                        should_display = True
-                        boat_data["bat_I_IN"] = data["value"]
-                    elif (
-                        data["module_name"] == "MSC19_5"
-                        and data["topic_name"] == "ADC"
-                        and data["byte_name"] == "AVG"
-                    ):
-                        should_display = True
-                        boat_data["bat_I_OUT"] = data["value"]
-
-                if should_display:
-                    should_display = False
-
-                    boat_data["bat_I"] = boat_data["bat_I_IN"] - boat_data["bat_I_OUT"]
-                    boat_data["bat_P"] = boat_data["bat_I"] * boat_data["bat_V"]
-                    display = ", ".join(
-                        [
-                            datetime.datetime.fromtimestamp(message.timestamp).strftime(
-                                "%H:%M:%S.%f"
-                            )[:-3],
-                            "mot_D: {:>5.1f} [%]".format(boat_data["mot_D"]),
-                            "bat_V: {:>6.2f} [V]".format(boat_data["bat_V"]),
-                            "bat_I: {:>6.2f} [A]".format(boat_data["bat_I"]),
-                            "bat_P: {:>8.2f} [W]".format(boat_data["bat_P"]),
-                        ]
-                    )
-                    print(display)
-
-        except KeyboardInterrupt:
-            # Stop receiving messages on keyboard interrupt
-            bus.shutdown()
-        except Exception as e:
-            print(e)
+    bus.shutdown()
