@@ -1,0 +1,14 @@
+msgpack==1.0.5
+mypy==1.4.1
+mypy-extensions==1.0.0
+numpy==1.25.0
+packaging==23.1
+pandas==2.0.3
+python-can==4.2.2
+python-dateutil==2.8.2
+pytz==2023.3
+six==1.16.0
+tomli==2.0.1
+typing_extensions==4.7.0
+tzdata==2023.3
+wrapt==1.15.0
