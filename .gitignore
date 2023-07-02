@@ -4,3 +4,4 @@ data
 .env*
 *.hdf5
 *.csv
+can_ids.json
