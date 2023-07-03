@@ -77,6 +77,10 @@ class CanTopicParser:
             "u16": (ctypes.c_uint16, 16),  # old format
             "uint8_t": (ctypes.c_uint8, 8),
             "uint16_t": (ctypes.c_uint16, 16),
+            "i8": (ctypes.c_int8, 8),  # old format
+            "i16": (ctypes.c_int16, 16),  # old format
+            "int8_t": (ctypes.c_int8, 8),
+            "int16_t": (ctypes.c_int16, 16),
             "bitfield": (ctypes.c_uint8, 1),
         }
         fields = []
