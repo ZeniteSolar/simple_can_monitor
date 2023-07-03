@@ -186,6 +186,7 @@ if __name__ == "__main__":
         "bat_I_OUT": 0.0,
         "bat_V": 0.0,
         "bat_P": 0.0,
+        "dir_pos": 0.0,
     }
     should_display = True
 
@@ -244,6 +245,14 @@ if __name__ == "__main__":
                 ):
                     should_display = True
                     boat_data["bat_I_OUT"] = data["value"]
+                elif (
+                    data["module_name"] == "MIC19"
+                    and data["topic_name"] == "MDE"
+                    and data["byte_name"] == "POSITION"
+                ):
+                    should_display = True
+                    boat_data["dir_pos"] = (26.3929618 * data["value"]) -135.0
+
 
             if should_display:
                 should_display = False
@@ -259,6 +268,7 @@ if __name__ == "__main__":
                         "bat_V: {:>6.2f} [V]".format(boat_data["bat_V"]),
                         "bat_I: {:>6.2f} [A]".format(boat_data["bat_I"]),
                         "bat_P: {:>8.2f} [W]".format(boat_data["bat_P"]),
+                        "dir_pos: {:>6.2f} [°]".format(boat_data["dir_pos"]),
                     ]
                 )
                 print(display)
