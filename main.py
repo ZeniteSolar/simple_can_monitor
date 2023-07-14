@@ -216,13 +216,13 @@ if __name__ == "__main__":
 
 	boat_data_average = MovingAverage(10)
 	boat_data = {
-		"mot_D": [0.0],
-		"bat_I": [0.0],
-		"bat_I_IN": [0.0],
-		"bat_I_OUT": [0.0],
-		"bat_V": [0.0],
-		"bat_P": [0.0],
-		"dir_pos": [0.0],
+		"mot_D": 0.0,
+		"bat_I": 0.0,
+		"bat_I_IN": 0.0,
+		"bat_I_OUT": 0.0,
+		"bat_V": 0.0,
+		"bat_P": 0.0,
+		"dir_pos": 0.0,
 	}
 	should_display = True
 
