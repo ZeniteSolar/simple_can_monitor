@@ -6,6 +6,7 @@ from typing import Optional, List
 import can
 import datetime
 import signal, sys
+import os
 
 from canparser_generator import CanTopicParser
 
@@ -116,6 +117,8 @@ def parse_payload(
 
 	return payload_data_list
 
+def clear_terminal():
+	os.system('cls' if os.name == 'nt' else 'clear')
 
 def process_message(parsed: dict, verbose: bool = False) -> Optional[list]:
 	"""Returns a list containing each data from a topic as a dict"""
@@ -271,7 +274,9 @@ if __name__ == "__main__":
 						"dir_pos: {:>6.2f} [°]".format(boat_data["dir_pos"]),
 					]
 				)
+				clear_terminal()
 				print(display)
+
 
 	except KeyboardInterrupt:
 		# Stop receiving messages on keyboard interrupt
