@@ -45,6 +45,11 @@ class CanIds:
 			return schema
 
 
+def append_data(data: list, value: float) -> None:
+	data.append(value)
+
+
+
 class Datasets:
 	def __init__(
 		self, datasets: list, input_path: str, output_path: Optional[str] = None
@@ -66,6 +71,33 @@ class Datasets:
 
 	def as_list(self):
 		return self.datasets
+
+class MovingAverage:
+	def __init__(self, period):
+		# Initialize with a period (length of moving window) and an empty dictionary to store key-values
+		self.period = period
+		self.data = {}
+
+	def add(self, key, value):
+		# Check if key exists in dictionary. If not, create an empty list
+		if key not in self.data:
+			self.data[key] = []
+
+		# Add the new value to the list corresponding to the key
+		self.data[key].append(value)
+
+		# If the list is longer than the period, remove the oldest element
+		if len(self.data[key]) > self.period:
+			self.data[key].pop(0)
+
+	def average(self, key):
+		# If the key does not exist in the dictionary, return None
+		if key not in self.data:
+			return None
+
+		# Return the average of the list corresponding to the key
+		return sum(self.data[key]) / len(self.data[key])
+
 
 
 def parse_payload(
@@ -182,14 +214,15 @@ if __name__ == "__main__":
 	schema = CanIds.load("can_ids.json")
 	schema = CanTopicParser.generate_parsers(schema)
 
+	boat_data_average = MovingAverage(10)
 	boat_data = {
-		"mot_D": 0.0,
-		"bat_I": 0.0,
-		"bat_I_IN": 0.0,
-		"bat_I_OUT": 0.0,
-		"bat_V": 0.0,
-		"bat_P": 0.0,
-		"dir_pos": 0.0,
+		"mot_D": [0.0],
+		"bat_I": [0.0],
+		"bat_I_IN": [0.0],
+		"bat_I_OUT": [0.0],
+		"bat_V": [0.0],
+		"bat_P": [0.0],
+		"dir_pos": [0.0],
 	}
 	should_display = True
 
@@ -256,22 +289,25 @@ if __name__ == "__main__":
 					should_display = True
 					boat_data["dir_pos"] = (26.3929618 * data["value"]) -135.0
 
+			boat_data["bat_I"] = boat_data["bat_I_IN"] - boat_data["bat_I_OUT"]
+			boat_data["bat_P"] = boat_data["bat_I"] * boat_data["bat_V"]
+
+			for key in boat_data:
+				boat_data_average.add(key, boat_data[key])
 
 			if should_display:
 				should_display = False
 
-				boat_data["bat_I"] = boat_data["bat_I_IN"] - boat_data["bat_I_OUT"]
-				boat_data["bat_P"] = boat_data["bat_I"] * boat_data["bat_V"]
 				display = ", ".join(
 					[
 						datetime.datetime.fromtimestamp(message.timestamp).strftime(
 							"%H:%M:%S.%f"
 						)[:-3],
-						"mot_D: {:>5.1f} [%]".format(boat_data["mot_D"]),
-						"bat_V: {:>6.2f} [V]".format(boat_data["bat_V"]),
-						"bat_I: {:>6.2f} [A]".format(boat_data["bat_I"]),
-						"bat_P: {:>8.2f} [W]".format(boat_data["bat_P"]),
-						"dir_pos: {:>6.2f} [°]".format(boat_data["dir_pos"]),
+						"mot_D: {:>5.1f} [%]".format(boat_data_average.average("mot_D")),
+						"bat_V: {:>6.2f} [V]".format(boat_data_average.average("bat_V")),
+						"bat_I: {:>6.2f} [A]".format(boat_data_average.average("bat_I")),
+						"bat_P: {:>8.2f} [W]".format(boat_data_average.average("bat_P")),
+						"dir_pos: {:>6.2f} [°]".format(boat_data_average.average("dir_pos")),
 					]
 				)
 				clear_terminal()
