@@ -5,10 +5,11 @@ CAN_BITRATE=500000
 
 # XTERM CONFIG
 XTERM_BORDERWIDTH=0
+XTERM_BORDERCOLOR='red'
 XTERM_FONTSIZE=20
-XTERM_FONT="Monospace"
-XTERM_FONTCOLOR="white"
-XTERM_BACKGROUNDCOLOR="black"
+XTERM_FONT='Hack:style=Regular'
+XTERM_FONTCOLOR='white'
+XTERM_BACKGROUNDCOLOR='black'
 
 # Find the first available CAN interface
 CAN_INTERFACE=$(ip link show type can | awk -F: '{print $2}' | awk '{$1=$1;print}' | head -n 1)
@@ -43,17 +44,19 @@ if [ -n "$SPAWN_WINDOW" ]; then
 
     echo "Starting in a new xterm window..."
     xterm \
-        -display :0 \
+        -display $DISPLAY \
         -title "xterm: Simple Can Monitor" \
-        +maximized \
-        # -hold \
+        -l \
+        -maximized \
+        -fullscreen \
         -mesg \
         +fbx \
-        -fa $XTERM_FONT \
+        -fn $XTERM_FONT \
         -fs $XTERM_FONTSIZE \
-        -bw $XTERM_BORDERWIDTH \
-        -bg $XTERM_BACKGROUNDCOLOR \
         -fg $XTERM_FONTCOLOR \
+        -bw $XTERM_BORDERWIDTH \
+        -bd $XTERM_BORDERCOLOR \
+        -bg $XTERM_BACKGROUNDCOLOR \
         -e "source .env/bin/activate && python3 main.py"
 else
     echo "Starting in the current terminal..."
