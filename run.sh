@@ -51,7 +51,7 @@ if [ -n "$SPAWN_WINDOW" ]; then
         -fullscreen \
         -mesg \
         +fbx \
-        -fn $XTERM_FONT \
+        -fa $XTERM_FONT \
         -fs $XTERM_FONTSIZE \
         -fg $XTERM_FONTCOLOR \
         -bw $XTERM_BORDERWIDTH \
