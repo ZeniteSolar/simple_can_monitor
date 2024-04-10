@@ -17,18 +17,19 @@ SERVICE_FILE=$PWD/simple_can_monitor.service
 cat << EOF > $SERVICE_FILE
 [Unit]
 Description=Simple Can Monitor
-After=graphical.target
+After=default.target
 
 [Service]
 ExecStart=$PWD/run.sh
 WorkingDirectory=$PWD
-User=joaoantoniocardoso
-Environment=SPAWN_WINDOW=1
+User=$USER
+Environment="SPAWN_WINDOW=1"
+Environment="DISPLAY=:0"
 Restart=always
-RestartSec=10
+RestartSec=3
 
 [Install]
-WantedBy=graphical.target
+WantedBy=default.target
 EOF
 echo "Service file '$SERVICE_FILE' generated."
 
