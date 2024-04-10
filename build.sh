@@ -2,7 +2,15 @@
 
 # Install system dependencies
 sudo apt-get update -y
-sudo apt-get install python3 can-utils xterm -y --no-install-recommends
+sudo apt-get install -y --no-install-recommends \
+  python3 \
+  can-utils \
+  xterm \
+  at-spi2-core \
+  fonts-hack-ttf
+
+# Reload fonts
+fc-cache
 
 # Install Python dependencies
 python3 -m venv .env
