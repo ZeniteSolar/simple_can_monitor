@@ -36,6 +36,11 @@ else
 fi
 
 if [ -n "$SPAWN_WINDOW" ]; then
+    echo "Waiting for X11 on display: '$DISPLAY'..."
+    while [ ! "$(xset -q)" ]; do
+        sleep 1
+    done
+
     echo "Starting in a new xterm window..."
     xterm \
         -display :0 \
