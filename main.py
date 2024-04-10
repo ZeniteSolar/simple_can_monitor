@@ -2,10 +2,13 @@
 # coding: utf-8
 
 import json
-from typing import Optional, List
+import os
+import signal
+import sys
+from datetime import datetime
+from typing import List, Optional
+
 import can
-import datetime
-import signal, sys
 
 from canparser_generator import CanTopicParser
 
@@ -13,18 +16,18 @@ from canparser_generator import CanTopicParser
 class CanIds:
     """
     Usage:
-        schema = load_can_ids('can_ids.json')
+            schema = load_can_ids('can_ids.json')
 
-        # Print each topic of each module:
-        [print(module, topic)
-         for topic in schema['modules'][module]['topics']
-         for module in schema['modules']]
+            # Print each topic of each module:
+            [print(module, topic)
+             for topic in schema['modules'][module]['topics']
+             for module in schema['modules']]
 
-        # Access a specific topic of a specific module:
-        parsed_id, parsed_signature = 33, 250
-        module = schema['modules'].get(parsed_signature)
-        topic = module['topics'].get(parsed_id)
-        print(module['name'], topic['name'])
+            # Access a specific topic of a specific module:
+            parsed_id, parsed_signature = 33, 250
+            module = schema['modules'].get(parsed_signature)
+            topic = module['topics'].get(parsed_id)
+            print(module['name'], topic['name'])
     """
 
     @staticmethod
@@ -65,6 +68,31 @@ class Datasets:
 
     def as_list(self):
         return self.datasets
+
+
+class MovingAverage:
+    def __init__(self, period):
+        self.period = period
+        self.data = {}
+
+    def add(self, key: str, value: float):
+        if key not in self.data:
+            self.data[key] = []
+
+        self.data[key].append(value)
+
+        if len(self.data[key]) > self.period:
+            self.data[key].pop(0)
+
+    def average(self, key: str) -> float:
+        if key not in self.data:
+            return float("NaN")
+
+        lenght = len(self.data[key])
+        if lenght == 0:
+            return float("NaN")
+
+        return sum(self.data[key]) / lenght
 
 
 def parse_payload(
@@ -115,6 +143,14 @@ def parse_payload(
             print(f"{parsed_dict=}")
 
     return payload_data_list
+
+
+def clear_terminal():
+    os.system("cls" if os.name == "nt" else "clear")
+
+
+def formatted_time(timestamp) -> str:
+    return datetime.fromtimestamp(timestamp).strftime("%H:%M:%S.%f")[:-3]
 
 
 def process_message(parsed: dict, verbose: bool = False) -> Optional[list]:
@@ -173,22 +209,12 @@ def process_message(parsed: dict, verbose: bool = False) -> Optional[list]:
 
 if __name__ == "__main__":
 
-
     global schema
 
     schema = CanIds.load("can_ids.json")
     schema = CanTopicParser.generate_parsers(schema)
 
-    boat_data = {
-        "mot_D": 0.0,
-        "bat_I": 0.0,
-        "bat_I_IN": 0.0,
-        "bat_I_OUT": 0.0,
-        "bat_V": 0.0,
-        "bat_P": 0.0,
-        "dir_pos": 0.0,
-    }
-    should_display = True
+    boat_data = MovingAverage(10)
 
     bus = can.interface.Bus(bustype="socketcan", bitrate=500_000)  # type: ignore
 
@@ -199,6 +225,8 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, int_handler)
     signal.signal(signal.SIGTERM, int_handler)
+
+    print("Waiting for messages from CAN bus...")
 
     try:
         # Start receiving messages from the bus
@@ -216,62 +244,73 @@ if __name__ == "__main__":
             if not parsed_topic:
                 continue
 
+            key = ""
+            value = 0
             for data in parsed_topic:
                 if (
                     data["module_name"] == "MIC19"
                     and data["topic_name"] == "MOTOR"
                     and data["byte_name"] == "D"
                 ):
-                    should_display = True
-                    boat_data["mot_D"] = data["value"] * 100
+                    key = "mot_D"
+                    value = data["value"] * 100
                 elif (
                     data["module_name"] == "MCS19"
                     and data["topic_name"] == "BAT"
                     and data["byte_name"] == "AVG"
                 ):
-                    should_display = True
-                    boat_data["bat_V"] = data["value"]
+                    key = "bat_V"
+                    value = data["value"] * 1e-2
                 elif (
                     data["module_name"] == "MSC19_4"
                     and data["topic_name"] == "ADC"
                     and data["byte_name"] == "AVG"
                 ):
-                    should_display = True
-                    boat_data["bat_I_IN"] = data["value"]
+                    key = "bat_I_IN"
+                    value = data["value"]
                 elif (
                     data["module_name"] == "MSC19_5"
                     and data["topic_name"] == "ADC"
                     and data["byte_name"] == "AVG"
                 ):
-                    should_display = True
-                    boat_data["bat_I_OUT"] = data["value"]
+                    key = "bat_I_OUT"
+                    value = data["value"]
                 elif (
                     data["module_name"] == "MIC19"
                     and data["topic_name"] == "MDE"
                     and data["byte_name"] == "POSITION"
                 ):
-                    should_display = True
-                    boat_data["dir_pos"] = (26.3929618 * data["value"]) -135.0
+                    key = "dir_pos"
+                    value = (26.3929618 * data["value"]) - 135.0
+                else:
+                    continue
 
+            boat_data.add(key, value)
 
-            if should_display:
-                should_display = False
+            avg = {
+                "mot_D": boat_data.average("mot_D"),
+                "bat_V": boat_data.average("bat_V"),
+                "bat_I_IN": boat_data.average("bat_I_IN"),
+                "bat_I_OUT": boat_data.average("bat_I_OUT"),
+                "dir_pos": boat_data.average("dir_pos"),
+            }
 
-                boat_data["bat_I"] = boat_data["bat_I_IN"] - boat_data["bat_I_OUT"]
-                boat_data["bat_P"] = boat_data["bat_I"] * boat_data["bat_V"]
-                display = ", ".join(
-                    [
-                        datetime.datetime.fromtimestamp(message.timestamp).strftime(
-                            "%H:%M:%S.%f"
-                        )[:-3],
-                        "mot_D: {:>5.1f} [%]".format(boat_data["mot_D"]),
-                        "bat_V: {:>6.2f} [V]".format(boat_data["bat_V"]),
-                        "bat_I: {:>6.2f} [A]".format(boat_data["bat_I"]),
-                        "bat_P: {:>8.2f} [W]".format(boat_data["bat_P"]),
-                        "dir_pos: {:>6.2f} [°]".format(boat_data["dir_pos"]),
-                    ]
-                )
-                print(display)
+            avg["bat_I"] = avg["bat_I_IN"] - avg["bat_I_OUT"]
+            avg["bat_P"] = avg["bat_I"] * avg["bat_V"]
+
+            display = "\n".join(
+                [
+                    formatted_time(message.timestamp),
+                    "mot_D  :  {:>5.1f}  [%]".format(avg["mot_D"]),
+                    "bat_V  :  {:>6.2f} [V]".format(avg["bat_V"]),
+                    "bat_I  :  {:>6.2f} [A]".format(avg["bat_I"]),
+                    "bat_P  :  {:>6.2f} [W]".format(avg["bat_P"]),
+                    "dir_pos: {:>6.2f} [°]".format(avg["dir_pos"]),
+                ]
+            )
+
+            clear_terminal()
+            print(display)
 
     except KeyboardInterrupt:
         # Stop receiving messages on keyboard interrupt
