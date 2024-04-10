@@ -15,7 +15,7 @@ fc-cache
 # Install Python dependencies
 python3 -m venv .env
 source .env/bin/activate
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 
 # Get the Zenite Solar's CAN_IDS protocol description file
 wget https://raw.githubusercontent.com/ZeniteSolar/CAN_IDS/master/can_ids.json -O can_ids.json
