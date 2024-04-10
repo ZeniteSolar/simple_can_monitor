@@ -4,7 +4,7 @@ mypy-extensions==1.0.0
 numpy==1.25.0
 packaging==23.1
 pandas==2.0.3
-python-can==4.2.2
+python-can==4.3.1
 python-dateutil==2.8.2
 pytz==2023.3
 six==1.16.0
