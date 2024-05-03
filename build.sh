@@ -12,6 +12,21 @@ sudo apt-get install -y --no-install-recommends \
 # Reload fonts
 fc-cache
 
+# Increase user's permissions to use ip command
+echo -e "\e[33mUNSAFE: Increasing user's permissions to use ip command...\e[0m"
+
+# Ask the user if they want to continue
+read -p "Do you want to continue? (y/n) " -n 1 -r
+# Move to a new line
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+  echo -e "\e[32mIncreasing user's permissions to use ip command...\e[0m"
+  sudo chmod u+s /bin/ip
+else
+    echo "Operation cancelled by user."
+fi
+
 # Install Python dependencies
 python3 -m venv .env
 source .env/bin/activate
