@@ -32,6 +32,10 @@ if ip link show "$CAN_INTERFACE" | grep -q "state DOWN"; then
     echo "Interface $CAN_INTERFACE is down. Setting link to up..."
     ip link set "$CAN_INTERFACE" up type can bitrate $CAN_BITRATE
     echo "Link for $CAN_INTERFACE is now up."
+    # Wait for the interface to be up with a timeout of 5 seconds if it's not up exit the script
+    timeout 5s bash -c "until ip link show $CAN_INTERFACE | grep -q 'state UP'; do sleep 1; done" || { 
+        echo "Failed to set link for $CAN_INTERFACE up."; exit 1; 
+    }
 else
     echo "Interface $CAN_INTERFACE is already up."
 fi
