@@ -43,23 +43,13 @@ if [ -n "$SPAWN_WINDOW" ]; then
     done
 
     echo "Starting in a new xterm window..."
-    xterm \
-        -display $DISPLAY \
-        -title "xterm: Simple Can Monitor" \
-        -l \
-        -maximized \
-        -fullscreen \
-        -mesg \
-        +fbx \
-        -fa $XTERM_FONT \
-        -fs $XTERM_FONTSIZE \
-        -fg $XTERM_FONTCOLOR \
-        -bw $XTERM_BORDERWIDTH \
-        -bd $XTERM_BORDERCOLOR \
-        -bg $XTERM_BACKGROUNDCOLOR \
-        -e "source .env/bin/activate && python3 main.py"
+    ~/can_parser_rs --period=25 &
+    sleep 5
+    chromium-browser --start-fullscreen --temp-profile --incognito --app  http://localhost:3000
 else
+
     echo "Starting in the current terminal..."
-    source .env/bin/activate && \
-    python3 main.py
+    ~/can_parser_rs --verbose --period=25 &
+    sleep 5
+    chromium-browser --start-fullscreen --temp-profile --incognito --app  http://localhost:3000
 fi
