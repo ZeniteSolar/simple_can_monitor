@@ -33,6 +33,7 @@ WorkingDirectory=$PWD
 User=$USER
 Environment="SPAWN_WINDOW=1"
 Environment="DISPLAY=:0"
+Environment=XAUTHORITY=/home/$USER/.Xauthority
 Restart=always
 RestartSec=3
 
