@@ -4,12 +4,7 @@
 CAN_BITRATE=500000
 
 # XTERM CONFIG
-XTERM_BORDERWIDTH=0
-XTERM_BORDERCOLOR='red'
-XTERM_FONTSIZE=34
-XTERM_FONT='Hack:style=Regular'
-XTERM_FONTCOLOR='white'
-XTERM_BACKGROUNDCOLOR='black'
+
 
 # Find the first available CAN interface
 CAN_INTERFACE=$(ip link show type can | awk -F: '{print $2}' | awk '{$1=$1;print}' | head -n 1)
@@ -45,11 +40,29 @@ if [ -n "$SPAWN_WINDOW" ]; then
     echo "Starting in a new xterm window..."
     ~/can_parser_rs --period=25 &
     sleep 5
-    chromium-browser --start-fullscreen --temp-profile --incognito --app  http://localhost:3000
+    # OLD VERSION (deprectated commands)
+    # chromium-browser --start-fullscreen --temp-profile --incognito --app  http://localhost:3000
+    chromium-browser \
+        --kiosk http://localhost:3000 \
+        --user-data-dir=/tmp/chromium-profile \
+        --noerrdialogs \
+        --disable-session-crashed-bubble \
+        --disable-infobars \
+        --check-for-update-interval=31536000 \
+        # --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT'
 else
 
     echo "Starting in the current terminal..."
     ~/can_parser_rs --verbose --period=25 &
     sleep 5
-    chromium-browser --start-fullscreen --temp-profile --incognito --app  http://localhost:3000
+    # OLD VERSION (deprectated commands)
+    # chromium-browser --start-fullscreen --temp-profile --incognito --app  http://localhost:3000
+    chromium-browser \
+        --kiosk http://localhost:3000 \
+        --user-data-dir=/tmp/chromium-profile \
+        --noerrdialogs \
+        --disable-session-crashed-bubble \
+        --disable-infobars \
+        --check-for-update-interval=31536000 \
+        # --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT'
 fi
